@@ -145,7 +145,6 @@ func SearchForBeer(keyword string) ([]Beer, error) {
 	found := []Beer{}
 
 	for _, elem := range foundElements {
-		fmt.Println(elem.OriginalIndex, elem.Target)
 		found = append(found, beerList[elem.OriginalIndex])
 	}
 
