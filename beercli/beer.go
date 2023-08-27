@@ -6,6 +6,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
+
+	"github.com/lithammer/fuzzysearch/fuzzy"
 )
 
 type Beer struct {
@@ -59,18 +62,26 @@ func GetAllBeers() ([]Beer, error) {
 
 	beerList := []Beer{}
 
-	body, err := ParseBeerRequest("https://api.punkapi.com/v2/beers/")
-	if err != nil {
-		log.Fatalln(err)
-		return []Beer{}, err
+	beerFull := []Beer{}
+
+	for i := 1; i <= 13; i++ {
+		url := fmt.Sprintf("https://api.punkapi.com/v2/beers?page=%v&per_page=%v", i, 25)
+
+		body, err := ParseBeerRequest(url)
+		if err != nil {
+			log.Fatalln(err)
+			return []Beer{}, err
+		}
+
+		if err := json.Unmarshal(body, &beerList); err != nil {
+			log.Fatalln(err)
+			return []Beer{}, err
+		}
+
+		beerFull = append(beerFull, beerList...)
 	}
 
-	if err := json.Unmarshal(body, &beerList); err != nil {
-		log.Fatalln(err)
-		return []Beer{}, err
-	}
-
-	return beerList, nil
+	return beerFull, nil
 }
 
 func GetBeerByID(id int) (Beer, error) {
@@ -115,4 +126,28 @@ func GetRandomBeer() (Beer, error) {
 	beerRandom := beerList[0]
 
 	return beerRandom, nil
+}
+
+func SearchForBeer(keyword string) ([]Beer, error) {
+	beerList, err := GetAllBeers()
+	if err != nil {
+		return nil, err
+	}
+
+	names := []string{}
+
+	for _, b := range beerList {
+		names = append(names, strings.ToLower(b.Name))
+	}
+
+	foundElements := fuzzy.RankFind(strings.ToLower(keyword), names)
+
+	found := []Beer{}
+
+	for _, elem := range foundElements {
+		fmt.Println(elem.OriginalIndex, elem.Target)
+		found = append(found, beerList[elem.OriginalIndex])
+	}
+
+	return found, nil
 }
